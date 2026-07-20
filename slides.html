@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지식관리 — 강의 슬라이드 · 경영자AI 밋업 2차</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --paper:#F2F4F6; --paper-2:#E8EBEE; --ink:#1C2128; --ink-soft:#4A4F58;
+    --line:#D9DEE4; --blueprint:#21456B; --blueprint-deep:#163149; --blueprint-tint:#E9F0F6;
+    --amber:#C2772A; --amber-tint:#FBEFDD; --approve:#2F6B4F; --approve-tint:#E5F0EA;
+    --danger:#B23A2E;
+    --shadow:0 1px 0 rgba(28,33,40,.04), 0 12px 28px -18px rgba(22,49,73,.4);
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Pretendard",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:var(--sans); color:var(--ink); background:var(--paper-2);
+    -webkit-font-smoothing:antialiased; letter-spacing:-.01em; overflow:hidden;
+  }
+
+  .deck{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;}
+  section.slide{
+    display:none; position:absolute; inset:0;
+    padding:clamp(28px,6vh,72px) clamp(28px,7vw,110px);
+    background:var(--paper);
+    flex-direction:column; justify-content:center;
+    overflow:hidden;
+  }
+  section.slide.on{display:flex; animation:in .3s ease;}
+  @keyframes in{from{opacity:0; transform:translateX(14px);} to{opacity:1; transform:none;}}
+  section.slide::before{
+    content:""; position:absolute; inset:0; opacity:.3; pointer-events:none;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:40px 40px;
+    -webkit-mask-image:radial-gradient(ellipse 120% 100% at 85% 0%,#000 0%,transparent 55%);
+            mask-image:radial-gradient(ellipse 120% 100% at 85% 0%,#000 0%,transparent 55%);
+  }
+  section.slide > *{position:relative; max-width:1050px;}
+
+  /* 유형별 */
+  h1.slide-title{font-size:clamp(38px,6.5vw,76px); font-weight:900; line-height:1.08; letter-spacing:-.035em; margin:0 0 18px; color:var(--blueprint);}
+  .slide-sub{font-size:clamp(16px,2.2vw,24px); color:var(--ink-soft); margin:0; line-height:1.6;}
+  .slide-kicker{
+    display:inline-block; font-family:var(--mono); font-size:clamp(12px,1.4vw,16px); font-weight:700;
+    color:#fff; background:var(--amber); border-radius:8px; padding:6px 14px;
+    letter-spacing:.08em; margin-bottom:22px; width:fit-content;
+  }
+  section.slide h2{font-size:clamp(28px,4.6vw,54px); font-weight:900; letter-spacing:-.03em; line-height:1.15; margin:0 0 24px;}
+  ul.slide-points{margin:0; padding:0; list-style:none; font-size:clamp(17px,2.4vw,27px); line-height:1.5;}
+  ul.slide-points li{
+    margin:16px 0; padding-left:34px; position:relative; color:var(--ink);
+  }
+  ul.slide-points li::before{
+    content:"—"; position:absolute; left:0; color:var(--amber); font-weight:800;
+  }
+  ul.slide-points b{color:var(--blueprint);}
+  pre.big-cmd{
+    margin:8px 0 18px; padding:clamp(18px,3vh,30px) clamp(20px,3vw,34px);
+    background:var(--ink); color:#E8EEF2; border-radius:16px; border:1px solid #2A3A4A;
+    font-family:var(--mono); font-size:clamp(16px,2.4vw,28px); line-height:1.75;
+    overflow-x:auto; white-space:pre; box-shadow:var(--shadow);
+  }
+  .slide-note{font-size:clamp(14px,1.8vw,19px); color:var(--ink-soft); margin:0; line-height:1.6;}
+  .slide-check{
+    font-size:clamp(17px,2.4vw,26px); font-weight:700; color:#234C3A;
+    background:var(--approve-tint); border:1.5px solid var(--approve); border-radius:14px;
+    padding:16px 22px; width:fit-content; line-height:1.5;
+  }
+  .slide-ref{
+    font-family:var(--mono); font-size:clamp(11px,1.3vw,14px); color:var(--ink-soft);
+    margin:26px 0 0; padding-top:14px; border-top:1px dashed var(--line);
+  }
+  blockquote{
+    margin:0; padding:0 0 0 24px; border-left:5px solid var(--amber);
+    font-size:clamp(19px,2.8vw,32px); font-weight:700; line-height:1.55; color:var(--blueprint-deep);
+  }
+  table{border-collapse:collapse; font-size:clamp(13px,1.7vw,19px); background:#fff; box-shadow:var(--shadow); border-radius:12px; overflow:hidden;}
+  th{background:var(--blueprint); color:#fff; padding:10px 18px; text-align:left;}
+  td{padding:10px 18px; border-top:1px solid var(--line);}
+  code{font-family:var(--mono); font-size:.9em; background:var(--paper-2); border:1px solid var(--line); border-radius:5px; padding:1px 7px; color:var(--blueprint-deep);}
+  pre code{background:none;border:none;padding:0;color:inherit;}
+
+  /* HUD */
+  .hud{
+    position:fixed; left:0; right:0; bottom:0; z-index:10;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:10px 18px; background:rgba(242,244,246,.92);
+    border-top:1px solid var(--line); backdrop-filter:blur(8px);
+  }
+  .hud__id{font-family:var(--mono); font-size:10.5px; font-weight:700; color:var(--blueprint);}
+  .hud__count{font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--ink-soft);}
+  .hud__count b{color:var(--blueprint);}
+  .hud__keys{font-family:var(--mono); font-size:10px; color:var(--ink-soft);}
+  @media(max-width:640px){ .hud__keys{display:none;} }
+  .hud__nav{display:flex; gap:6px;}
+  .hud__nav button{
+    font-family:var(--mono); font-size:12px; font-weight:700; color:var(--blueprint);
+    background:#fff; border:1px solid var(--line); border-radius:8px;
+    padding:6px 14px; cursor:pointer; transition:.15s;
+  }
+  .hud__nav button:hover{border-color:var(--blueprint); box-shadow:var(--shadow);}
+  .bar{position:fixed; top:0; left:0; height:4px; background:linear-gradient(90deg,var(--blueprint),var(--amber)); z-index:11; transition:width .25s;}
+
+  /* 클릭 존 */
+  .zone{position:fixed; top:0; bottom:46px; width:18%; z-index:5; cursor:pointer;}
+  .zone.prev{left:0;} .zone.next{right:0;}
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar"></div>
+<div class="deck" id="deck">
+<!-- ============ 표지 ============ -->
+<section class="slide" data-sec="0">
+  <h1 class="slide-title">경영자 AI 밋업 2차 — 지식관리</h1>
+  <p class="slide-sub">폴더 생성부터 보관·지식화·재사용까지, 사람의 주도 아래 LLM과 함께 관리하는 법</p>
+</section>
+
+<!-- ============ 개요 : 학습목표 ============ -->
+<section class="slide" data-sec="0">
+  <h2>오늘의 학습목표</h2>
+  <ul class="slide-points">
+    <li>보관 단계에 이른 업무파일을 <strong>LLM 위키</strong>로 추출해 지식화한다</li>
+    <li>팀원이 <strong>권한범위 안에서만</strong> 꺼내 쓰도록 MCP 인터페이스로 통제한다</li>
+    <li>꺼내 쓰는 지식은 <strong>구조 · 의미 · 관계</strong>의 연결에 중점을 둔다</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html 개요·학습목표</p>
+</section>
+
+<!-- ============ 개요 : 순환 구조 ============ -->
+<section class="slide" data-sec="0">
+  <h2>복리로 쌓이는 지식 순환</h2>
+  <ul class="slide-points">
+    <li><strong>만들기</strong> — 공통 폴더 생애주기 구조 + Git 버전관리</li>
+    <li><strong>지식화</strong> — inbox 이동 → 관리자 검토 → 지식컴파일 → raw/wiki 적립</li>
+    <li><strong>꺼내쓰기</strong> — MCP 서버 → 권한 내 활용 → 새 지식 탄생 → 다시 1번으로</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §2 목표 시스템 다이어그램</p>
+</section>
+
+<!-- ============ 섹션 1 : 준비하기 ============ -->
+<section class="slide" data-sec="1">
+  <div class="slide-kicker">SECTION 01</div>
+  <h2>준비하기 — 도구 설치</h2>
+</section>
+
+<section class="slide" data-sec="1">
+  <h2>설치할 것 10가지 — 순서가 곧 전략</h2>
+  <ul class="slide-points">
+    <li><strong>손으로 설치는 딱 2개</strong> — ① VS Code → ② Claude Code</li>
+    <li><strong>나머지는 AI에게 시켜서</strong> — Git · Node.js · Codex · Antigravity · GitHub CLI(공통계정 1개) · Obsidian · Python</li>
+    <li><strong>마지막</strong> — 각자 업무 폴더 준비</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §1 준비하기</p>
+</section>
+
+<section class="slide" data-sec="1">
+  <h2>라이브 데모 — 설치가 됐는지 확인</h2>
+  <blockquote>“Node.js, Claude Code, Codex가 잘 설치됐는지 터미널에서 각각 버전을 확인해서 알려줘”</blockquote>
+  <pre class="big-cmd"><code>node -v
+claude --version
+codex --version</code></pre>
+  <p class="slide-note">AI가 위 프롬프트를 받아 아래 명령을 실행합니다 — CLI에 능숙하다면 VS Code 통합 터미널(Ctrl+`)에서 세 줄을 직접 입력해도 됩니다. 버전 숫자가 나오면 성공입니다. Node.js는 v24 LTS 기준입니다.</p>
+</section>
+
+<section class="slide" data-sec="1">
+  <div class="slide-check">✓ 10가지 도구가 모두 설치되고, 각자 업무 폴더가 손닿는 곳에 준비되었습니다</div>
+  <p class="slide-ref">막히면: 교안 index.html §1 도구별 설치 절차(macOS/Windows)</p>
+</section>
+
+<!-- ============ 섹션 2 : 목표 시스템 다이어그램 ============ -->
+<section class="slide" data-sec="2">
+  <div class="slide-kicker">SECTION 02</div>
+  <h2>목표 시스템 다이어그램</h2>
+</section>
+
+<section class="slide" data-sec="2">
+  <h2>8단계 순환 — 우리가 지을 집의 설계도</h2>
+  <ul class="slide-points">
+    <li>① 공통 폴더·파일 생애주기 구조 → ② Git 버전관리(공통)</li>
+    <li>③ 완성 프로젝트 inbox 이동(팀원) → ④ inbox 검토(지식관리자) → ⑤ 지식컴파일</li>
+    <li>⑥ raw 이동 + wiki 추출 적립 → ⑦ MCP 서버·권한통제 → ⑧ 권한 내 지식활용 → ①로 순환</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §2</p>
+</section>
+
+<section class="slide" data-sec="2">
+  <h2>역할이 다르면 하는 일이 다릅니다</h2>
+  <ul class="slide-points">
+    <li><strong>각 팀원</strong> — 만들고, 커밋하고, 완성되면 inbox로 보낸다</li>
+    <li><strong>회사 지식관리자</strong> — inbox 검토, 지식컴파일, 권한 통제</li>
+    <li><strong>모든 사용자</strong> — 일반 LLM에서 권한범위 내 지식을 꺼내 새 지식을 만든다</li>
+  </ul>
+</section>
+
+<section class="slide" data-sec="2">
+  <div class="slide-check">✓ 8단계 순환도를 보고 "내 역할은 어디부터 어디까지"를 말할 수 있습니다</div>
+</section>
+
+<!-- ============ 섹션 3 : Git의 운용 ============ -->
+<section class="slide" data-sec="3">
+  <div class="slide-kicker">SECTION 03</div>
+  <h2>Git의 운용</h2>
+</section>
+
+<section class="slide" data-sec="3">
+  <h2>저장 · 커밋 · 푸시 — 세 단어만 잡으면 됩니다</h2>
+  <ul class="slide-points">
+    <li><strong>저장</strong> — 내 컴퓨터 파일에 쓰는 것 (Git은 아직 모름)</li>
+    <li><strong>커밋</strong> — "이 시점을 기록해 둬" 하고 도장을 찍는 것</li>
+    <li><strong>푸시</strong> — 도장 찍힌 기록을 원격 저장소(GitHub)로 올리는 것</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §3 개념 정립</p>
+</section>
+
+<section class="slide" data-sec="3">
+  <h2>라이브 데모 — 더미 파일로 첫 커밋</h2>
+  <blockquote>“이 더미 파일 폴더를 git 저장소로 만들고, 파일을 모두 스테이징해서 ‘첫 커밋: 더미 파일 등록’ 메시지로 커밋해줘”</blockquote>
+  <pre class="big-cmd"><code>git init
+git add .
+git commit -m "첫 커밋: 더미 파일 등록"</code></pre>
+  <p class="slide-note">강사가 준비한 더미 파일을 내려받아 다 같이 실행합니다. AI가 위 프롬프트를 받아 아래 명령을 실행합니다 — CLI에 능숙하다면 직접 실행해도 됩니다. 끝나면 git log --oneline 으로 도장 찍힌 기록을 확인합니다.</p>
+</section>
+
+<section class="slide" data-sec="3">
+  <h2>라이브 데모 — 브랜치: 원본은 두고 갈래로 실험</h2>
+  <blockquote>“draft-v2 브랜치를 새로 만들어 전환하고, 더미 파일을 고쳐 커밋한 다음 main으로 돌아와 draft-v2를 병합해줘”</blockquote>
+  <pre class="big-cmd"><code>git switch -c draft-v2
+git switch main
+git merge draft-v2</code></pre>
+  <p class="slide-note">AI가 위 프롬프트를 받아 아래 명령을 실행합니다 — CLI에 능숙하다면 직접 실행해도 됩니다. draft-v2 갈래에서 더미 파일을 고쳐 커밋한 뒤 main으로 돌아와 합칩니다. checkout이 아니라 최신 명령 switch를 씁니다.</p>
+</section>
+
+<section class="slide" data-sec="3">
+  <h2>실무 3종 세트</h2>
+  <ul class="slide-points">
+    <li><strong>커밋메시지 템플릿</strong> — LLM과 함께 만들어 ~/.gitmessage.txt 로 지정, 커밋 때 기본 헤드메시지 선택 + 상세 작성</li>
+    <li><strong>LFS</strong> — 대용량 파일은 지정 저장소에, Git 히스토리에는 가벼운 포인터만 로컬로 쌓기</li>
+    <li><strong>바이너리 관리</strong> — 파일별 커밋메시지 + 폴더 루트 히스토리.md 동시 기록</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §3 커밋 템플릿 · LFS · 바이너리 관리법</p>
+</section>
+
+<section class="slide" data-sec="3">
+  <div class="slide-check">✓ 더미 파일로 커밋 2회 + 브랜치 병합 1회를 직접 마쳤고, git log --oneline 에 기록이 보입니다</div>
+</section>
+
+<!-- ============ 섹션 4 : 업무환경에서의 데이터 생성 시스템 ============ -->
+<section class="slide" data-sec="4">
+  <div class="slide-kicker">SECTION 04</div>
+  <h2>업무환경에서의 데이터 생성 시스템</h2>
+</section>
+
+<section class="slide" data-sec="4">
+  <h2>무엇을 어디에 — 구조별 Git 관리 지침</h2>
+  <ul class="slide-points">
+    <li><strong>GitHub로</strong> — 코드 · 워크플로우 · 템플릿 (용량 작고 배포 효과 큰 것)</li>
+    <li><strong>로컬 Git으로</strong> — 바이너리 · 로컬 업무 파일</li>
+    <li>각 회사의 실제 생성·보관 구조 예제를 수강생이 제출해 함께 공통 지침을 만듭니다</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §4 구조별 깃관리 지침</p>
+</section>
+
+<section class="slide" data-sec="4">
+  <h2>규칙은 강제되어야 규칙입니다</h2>
+  <ul class="slide-points">
+    <li><strong>전사 공통</strong> 폴더·파일 생성 규칙강제 템플릿 작성</li>
+    <li>규칙에 안 맞는 파일은 <strong>hook(클로드코드) 또는 순찰자 에이전트</strong>가 정기 점검·강제 조정</li>
+    <li>raw 폴더 이동 시 · 장기보관 이동 시 = <strong>반드시 강제 순찰</strong> 통과</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §4 규칙강제 템플릿 · 순찰자</p>
+</section>
+
+<section class="slide" data-sec="4">
+  <h2>라이브 데모 — 순찰자에게 한 바퀴 돌게 하기</h2>
+  <pre class="big-cmd"><code>claude</code></pre>
+  <p class="slide-note">업무 폴더에서 Claude Code를 열고 이렇게 말합니다: "이 폴더에서 우리 명명 규칙에 어긋난 파일을 찾아 목록으로 보고하고, 수정안을 제안해줘." 보고만 시키고 수정 승인은 사람이 합니다.</p>
+</section>
+
+<section class="slide" data-sec="4">
+  <div class="slide-check">✓ 우리 회사 기준으로 "GitHub행 / 로컬 Git행" 분류표와 규칙강제 템플릿 초안이 나왔습니다</div>
+</section>
+
+<!-- ============ 섹션 5 : llm wiki 구축 ============ -->
+<section class="slide" data-sec="5">
+  <div class="slide-kicker">SECTION 05</div>
+  <h2>LLM Wiki 구축</h2>
+</section>
+
+<section class="slide" data-sec="5">
+  <h2>위키의 뼈대 — 구조 · 의미 · 관계</h2>
+  <ul class="slide-points">
+    <li>강사 예제(깃허브 제공)를 받아 <strong>우리 목적에 맞게 재작성</strong>하는 법을 익힙니다</li>
+    <li>바이너리 파일(엑셀·PPT·한글·워드·이미지·캐드 등)은 <strong>텍스트로 컴파일</strong>해야 위키가 읽습니다</li>
+    <li>컴파일 스킬은 LLM에게 오픈소스 추천부터 요청 — 교안의 예제 프롬프트 사용</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §5 위키 구조 · 바이너리 컴파일 프롬프트</p>
+</section>
+
+<section class="slide" data-sec="5">
+  <h2>라이브 데모 — 바이너리를 마크다운으로</h2>
+  <blockquote>“markitdown을 전체 옵션으로 설치하고, 이 폴더의 보고서.docx를 보고서.md 마크다운으로 변환해줘”</blockquote>
+  <pre class="big-cmd"><code>pip install 'markitdown[all]'
+markitdown 보고서.docx -o 보고서.md</code></pre>
+  <p class="slide-note">AI가 위 프롬프트를 받아 아래 명령을 실행합니다 — CLI에 능숙하다면 직접 실행해도 됩니다. Word·엑셀·PPT·PDF를 한 도구로 변환합니다. 한글(HWP)은 미지원이라 별도 도구(gethwp 등)를 씁니다 — 상세는 교안 토글에.</p>
+</section>
+
+<section class="slide" data-sec="5">
+  <h2>라이브 데모 — graphify로 지식그래프 만들기</h2>
+  <pre class="big-cmd"><code>uv tool install graphifyy
+/graphify . --wiki</code></pre>
+  <p class="slide-note">설치 패키지명은 graphifyy(y가 두 개), 명령은 graphify입니다. 폴더를 통째로 넣으면 지식지도(HTML+JSON+위키)가 나옵니다.</p>
+</section>
+
+<section class="slide" data-sec="5">
+  <h2>라이브 데모 — Qdrant: 의미로 찾는 검색 창고</h2>
+  <blockquote>“qdrant-client 파이썬 패키지를 설치하고, 서버 없이 로컬 메모리 모드(:memory:)로 잘 동작하는지 확인해줘”</blockquote>
+  <pre class="big-cmd"><code>pip install qdrant-client</code></pre>
+  <p class="slide-note">AI가 위 프롬프트를 받아 아래 명령을 실행합니다 — CLI에 능숙하다면 직접 실행해도 됩니다. 벡터 데이터베이스(뜻이 비슷한 문서를 찾아주는 창고)입니다. 서버 없이 QdrantClient(":memory:") 로컬 모드로 바로 실습합니다. Docker 대시보드 경로는 교안 토글에.</p>
+</section>
+
+<section class="slide" data-sec="5">
+  <div class="slide-check">✓ 바이너리 1개가 .md로 변환되고, graphify 결과 graph.html이 브라우저에서 열립니다</div>
+</section>
+
+<!-- ============ 섹션 6 (교안 5-1) : GBrain 일원화 ============ -->
+<section class="slide" data-sec="6">
+  <div class="slide-kicker">SECTION 06 · 더 알아보기</div>
+  <h2>지식화 구조를 GBrain으로 일원화하는 심플 구조</h2>
+</section>
+
+<section class="slide" data-sec="6">
+  <h2>GBrain — 한 도구로 끝내는 선택지</h2>
+  <ul class="slide-points">
+    <li>마크다운 노트를 넣으면 <strong>스스로 연결되는 지식그래프</strong>가 됩니다 (서버·Docker 불필요)</li>
+    <li>벡터 + 키워드 + 그래프 <strong>하이브리드 검색</strong>, 출처 인용이 붙은 답변(think)</li>
+    <li>graphify는 "일괄 분석 → 산출물", GBrain은 "에이전트의 지속 메모리" — 용도가 다릅니다</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §5-1 GBrain</p>
+</section>
+
+<section class="slide" data-sec="6">
+  <h2>라이브 데모 — 2분 만에 두 번째 뇌</h2>
+  <blockquote>“GitHub의 garrytan/gbrain을 bun으로 전역 설치하고, pglite 모드로 초기화한 다음 ‘우리 회사 계약 검토 절차는?’이라고 think로 질문해줘”</blockquote>
+  <pre class="big-cmd"><code>bun install -g github:garrytan/gbrain
+gbrain init --pglite
+gbrain think "우리 회사 계약 검토 절차는?"</code></pre>
+  <p class="slide-note">AI가 위 프롬프트를 받아 아래 명령을 실행합니다 — CLI에 능숙하다면 직접 실행해도 됩니다. init 후 gbrain import ~/notes/ 로 노트 폴더를 넣고 질문합니다. Windows 안내가 아직 빈약해 실습은 macOS 기준입니다.</p>
+</section>
+
+<section class="slide" data-sec="6">
+  <div class="slide-check">✓ gbrain doctor 가 정상이고, think 질문에 출처 인용이 붙은 답이 돌아옵니다</div>
+</section>
+
+<section class="slide" data-sec="6">
+  <h2>지식관리는 한곳에 쌓는 일이 아닙니다</h2>
+  <ul class="slide-points">
+    <li><b>흐르는 정보</b>는 GBrain이 기억합니다 — 업무일지·회의록·메모 (작업 기억)</li>
+    <li><b>확정된 지식</b>은 LLM 위키가 보존합니다 — 기준·매뉴얼·정책 (장기 기억)</li>
+    <li>AI는 MCP로 두 기억을 함께 쓰고, <b>사람이 검토·승인한 것만 승격</b>됩니다</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §5-1 "GBrain과 LLM 위키의 역할 분리"</p>
+</section>
+
+<!-- ============ 섹션 7 (교안 6) : MCP 서버 구축 ============ -->
+<section class="slide" data-sec="7">
+  <div class="slide-kicker">SECTION 07</div>
+  <h2>MCP 서버 구축 — 권한 있는 사람만 꺼내 쓰게</h2>
+</section>
+
+<section class="slide" data-sec="7">
+  <h2>위키 검색 MCP 서버 — 설계 3원칙</h2>
+  <ul class="slide-points">
+    <li><strong>서버 위치</strong> — 관리자만 접근할 수 있는 곳에 배치</li>
+    <li><strong>구축은 LLM에게 요청</strong> — 우리가 정할 것은 요구사항과 권한 정책</li>
+    <li><strong>권한등급 2방식</strong> — (a) 토큰으로 PC별 제어 · (b) Authorization 계정별 인증으로 개별 제어</li>
+  </ul>
+  <p class="slide-ref">상세: 교안 index.html §6 MCP 서버 구축</p>
+</section>
+
+<section class="slide" data-sec="7">
+  <h2>라이브 데모 — 위키 서버를 Claude에 연결</h2>
+  <pre class="big-cmd"><code>claude mcp add --transport stdio wiki -- python server.py
+claude mcp list</code></pre>
+  <p class="slide-note">연결 후 Claude Code 안에서 /mcp 를 입력해 서버 상태와 인증을 확인합니다. -- 뒤가 실제 실행 명령입니다.</p>
+</section>
+
+<section class="slide" data-sec="7">
+  <h2>통합 스킬 — 묻는 법을 몰라도 답이 나오게</h2>
+  <ul class="slide-points">
+    <li>구조 · 관계 · 의미 질문을 <strong>프레임웍별로 따로 묻지 않아도</strong> 자동 인식해 답하게 하는 통합 스킬</li>
+    <li>마지막 단계: <strong>일반 LLM에 연결</strong> — 누구나 권한범위 안에서 자유롭게 활용</li>
+    <li>여기서 새 지식이 태어나 다시 ①번으로 — 순환 완성</li>
+  </ul>
+</section>
+
+<section class="slide" data-sec="7">
+  <div class="slide-check">✓ claude mcp list 에 wiki 서버가 보이고, 권한 밖 질문은 거절되는 것을 확인했습니다</div>
+</section>
+
+<!-- ============ 정책 숙제 토론 ============ -->
+<section class="slide" data-sec="8">
+  <h2>정책 숙제 — 2차 지식, 바로 원본에 넣을 것인가?</h2>
+  <ul class="slide-points">
+    <li><strong>A안</strong> — 추출 지식으로 만든 새 지식을 원본지식에 바로 산입</li>
+    <li><strong>B안</strong> — 정거장을 두고 관리자 통제로 검토 후 재지식화</li>
+    <li>2차 지식 생성은 AI 특성상 <strong>왜곡이 섞일 수 있다</strong> — 원본 오염 방지 장치의 수위는 조직의 정책으로</li>
+    <li><strong>교안 권장</strong> — 2차 합성지식은 <strong>별도 구역에 분리 보관</strong>, 원본 승격은 <strong>전담 담당자만</strong> (만든 사람 ≠ 올리는 사람)</li>
+  </ul>
+  <p class="slide-note">토론: 우리 회사의 승격 담당자는 누구로, 승격 주기는 어떻게? — 그것이 사람과 AI가 같이 일하는 구조입니다.</p>
+  <p class="slide-ref">상세: 교안 index.html 포인트(정책 숙제)</p>
+</section>
+
+<!-- ============ 마무리 ============ -->
+<section class="slide" data-sec="9">
+  <h1 class="slide-title">오늘 지은 것: 복리 지식 순환</h1>
+  <p class="slide-sub">만들고(Git) → 지식화하고(inbox·컴파일·wiki) → 통제하며 꺼내 쓰고(MCP) → 다시 만든다. 사람이 주도하고 LLM이 보좌합니다.</p>
+  <div class="slide-check">✓ 다음 실습까지: 각자 회사의 데이터 생성·보관 구조 예제 1건 제출 (섹션4 재료)</div>
+</section>
+</div>
+
+<div class="zone prev" id="zPrev" title="이전"></div>
+<div class="zone next" id="zNext" title="다음"></div>
+
+<div class="hud">
+  <span class="hud__id">경영자AI 밋업 2차 — 지식관리</span>
+  <span class="hud__keys">← → 스페이스: 이동 · Home/End: 처음/끝 · F: 전체화면</span>
+  <div class="hud__nav">
+    <button id="btnPrev">← 이전</button>
+    <button id="btnNext">다음 →</button>
+  </div>
+  <span class="hud__count"><b id="cur">1</b> / <span id="tot">1</span></span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var i = 0;
+  try{ i = Math.min(parseInt(location.hash.slice(1))||0, slides.length-1); }catch(e){}
+  document.getElementById('tot').textContent = slides.length;
+  function show(n){
+    if(n<0||n>=slides.length) return;
+    slides[i].classList.remove('on');
+    i = n; slides[i].classList.add('on');
+    document.getElementById('cur').textContent = i+1;
+    document.getElementById('bar').style.width = ((i+1)/slides.length*100)+'%';
+    history.replaceState(null,'','#'+i);
+  }
+  if(slides.length){ slides[0].classList.add('on'); show(i); }
+  function next(){ show(i+1); } function prev(){ show(i-1); }
+  document.getElementById('btnNext').addEventListener('click', next);
+  document.getElementById('btnPrev').addEventListener('click', prev);
+  document.getElementById('zNext').addEventListener('click', next);
+  document.getElementById('zPrev').addEventListener('click', prev);
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown') { e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp') { e.preventDefault(); prev(); }
+    else if(e.key==='Home') show(0);
+    else if(e.key==='End') show(slides.length-1);
+    else if(e.key==='f'||e.key==='F'){ document.documentElement.requestFullscreen ? (document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()) : null; }
+  });
+})();
+</script>
+</body>
+</html>
