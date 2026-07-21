@@ -4575,6 +4575,73 @@ ssh 사용자이름@서버tailnet이름</code></pre>
 
   <div class="callout"><strong>6-6과 나란히 보기:</strong> 같은 서버, 같은 Tailscale 길이지만 — <strong>팀원은 위키 MCP라는 좁은 창구</strong>로 위키만 읽고, <strong>관리자는 SSH라는 강한 창구</strong>로 서버 전체를 원격으로 손봅니다. &quot;누가 어떤 창구를 받았느냐&quot;로 할 수 있는 일이 완전히 갈린다는 6-6의 원리가, 관리자 쪽에서 이렇게 나타납니다.</div>
 
+  <h3>6-8. 팀원끼리는 못 보게 — Tailscale 접근 제어(ACL)</h3>
+  <div class="why">6-5에서 팀원을 초대하면, Tailscale의 <strong>기본 설정</strong>은 &ldquo;초대된 모든 기기가 서로서로 연결&rdquo;입니다. 즉 서버뿐 아니라 <strong>팀원 A가 팀원 B의 노트북에도</strong> 접근을 시도할 수 있는 &lsquo;그물망&rsquo; 상태죠. 회사에서는 보통 <strong>&lsquo;팀원 → 서버&rsquo;만 필요</strong>하고 팀원끼리 서로 닿는 건 막아야 합니다. 이걸 <strong>접근 제어(ACL)</strong>로 조입니다.</div>
+
+  <table class="tbl">
+    <thead><tr><th></th><th>연결 관계</th><th>모양</th></tr></thead>
+    <tbody>
+      <tr><td>기본 (초대만 한 상태)</td><td>서버↔A, 서버↔B, <strong>A↔B까지 전부</strong> 서로 연결</td><td>그물망 (mesh)</td></tr>
+      <tr><td>ACL 설정 후</td><td>A→서버, B→서버 <strong>만</strong> (A↔B·서버→팀원 차단)</td><td>별형 · 단방향</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout"><strong>&lsquo;일방향&rsquo;의 의미:</strong> ACL은 &lsquo;누가 먼저 말을 거느냐(연결을 시작하느냐)&rsquo;를 통제합니다. &lsquo;팀원 → 서버&rsquo;만 허용하면 팀원은 서버에 접속할 수 있지만, <strong>서버가 팀원 PC로 먼저 들어가지도, 팀원끼리 서로 들어가지도</strong> 못합니다. 서버를 중심으로 한 단방향 별 모양이 됩니다.</div>
+
+  <h4>1) 서버에 &lsquo;태그&rsquo; 붙이기 — 정책에서 서버를 가리키기 위해</h4>
+  <p>정책을 쓰려면 &lsquo;위키 서버&rsquo;를 이름표로 가리켜야 합니다. 서버 기기에 <code>tag:wiki-server</code> 태그를 붙입니다.</p>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (서버에서) Claude Code에</div>
+    <blockquote class="llm-prompt">이 서버를 Tailscale 정책에서 가리킬 수 있게 tag:wiki-server 태그를 붙여줘. tailscale 명령으로 이 태그를 광고(advertise)하도록 다시 up 해주고, 관리 콘솔에서 이 태그가 이 기기에 적용됐는지 확인하는 법도 알려줘.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
+      <pre class="cmd"><code># 서버에 태그를 광고하며 다시 up (관리 콘솔 tagOwners에 태그 정의가 있어야 승인됨)
+sudo tailscale up --advertise-tags=tag:wiki-server
+
+# 적용 확인 — 이 기기에 tag:wiki-server 가 붙었는지
+tailscale status</code></pre>
+    </details>
+  </div>
+
+  <h4>2) 접근 정책(ACL) 만들어 붙이기 — &lsquo;팀원 → 서버만&rsquo;</h4>
+  <p>Tailscale의 접근 규칙은 관리 콘솔의 <strong>Access Controls</strong> 화면에 <strong>JSON 정책</strong>으로 씁니다. 코드는 LLM에게 맡기세요.</p>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — Claude Code에</div>
+    <blockquote class="llm-prompt">우리 Tailscale 접근 정책(ACL) JSON을 만들어줘. 규칙은 이렇게: (1) 팀원 그룹 group:staff 는 위키 서버 tag:wiki-server 의 8721 포트에만 접속할 수 있다. (2) 팀원끼리(group:staff 서로)는 접속하지 못한다. (3) 서버가 팀원에게 먼저 접속하는 것도 막는다. (4) 관리자 group:admin 만 서버에 SSH(22)로 접속할 수 있다. 관리 콘솔 Access Controls에 그대로 붙여넣을 수 있는 JSON으로 주고, 각 줄이 무슨 뜻인지 주석으로 설명도 붙여줘.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 만들어 주는 실제 설정 (관리 콘솔 Access Controls에 붙여넣는 JSON)</summary>
+      <pre class="cmd"><code>{
+  "tagOwners": {
+    "tag:wiki-server": ["group:admin"]
+  },
+  "groups": {
+    "group:admin": ["관리자@회사.com"],
+    "group:staff": ["팀원1@회사.com", "팀원2@회사.com"]
+  },
+  "acls": [
+    // 팀원은 위키 서버의 8721 포트에만 접속 가능
+    { "action": "accept", "src": ["group:staff"], "dst": ["tag:wiki-server:8721"] },
+    // 관리자는 서버에 SSH(22)와 위키(8721)로 접속 가능
+    { "action": "accept", "src": ["group:admin"], "dst": ["tag:wiki-server:22,8721"] }
+  ]
+}</code></pre>
+    </details>
+  </div>
+  <div class="callout"><strong>핵심 — 왜 &lsquo;금지&rsquo; 규칙이 없어도 되나:</strong> Tailscale은 <code>acls</code>에 규칙을 하나라도 쓰는 순간, <strong>명시하지 않은 연결은 전부 차단</strong>합니다(기본 거부). 그래서 위 두 줄만 있으면 &lsquo;팀원끼리&rsquo;도 &lsquo;서버→팀원&rsquo;도 자동으로 막힙니다 — 따로 금지 규칙을 쓸 필요가 없습니다.</div>
+
+  <div class="checkpoint">이렇게 나오면 성공: 팀원 노트북에서 <strong>위키 서버(8721)는 접속되지만, 다른 팀원 기기로는 접속이 안 됩니다.</strong> 팀원 PC에서 <code>tailscale ping 다른팀원기기</code>를 하면 응답이 없고(차단됨), 위키 서버는 정상 응답하면 격리가 걸린 것입니다.</div>
+
+  <details class="toggle warn">
+    <summary>자주 하는 실수 &amp; 복구법</summary>
+    <ul>
+      <li><strong>정책을 저장했더니 나(관리자)도 서버에 못 들어간다</strong> → 규칙에서 <code>group:admin</code>에 본인 이메일이 빠졌거나 서버 태그가 아직 승인 안 된 경우입니다. 관리 콘솔 Access Controls에는 저장 전 미리보기가 있으니, LLM에게 &quot;이 정책에서 내 계정이 서버에 접근 가능한지 확인해줘&quot;라고 먼저 점검하세요.</li>
+      <li><strong>서버 태그가 적용 안 됨</strong> → 태그는 정책의 <code>tagOwners</code>에 먼저 정의돼 있어야 서버에서 광고가 승인됩니다. <strong>정책 JSON을 먼저 저장한 뒤</strong> 서버에서 <code>tailscale up --advertise-tags</code>를 다시 실행하세요.</li>
+      <li><strong>팀원이 서버에도 못 붙는다</strong> → <code>dst</code>의 포트가 실제 서버 포트(8721)와 맞는지, 팀원 이메일이 <code>group:staff</code>에 들어 있는지 확인하세요.</li>
+    </ul>
+  </details>
+
+  <div class="callout"><strong>정리:</strong> 초대는 &lsquo;길&rsquo;을 열어 줄 뿐이고, 기본값은 모두가 서로 연결된 그물망입니다. <strong>ACL로 &lsquo;팀원 → 서버만&rsquo;</strong>으로 조이면 팀원은 위키만 쓰고 서로의 기기는 볼 수 없는 안전한 별 모양이 됩니다. 6-6의 &lsquo;창구(MCP)&rsquo; 통제가 &lsquo;무엇을 쓰나&rsquo;였다면, ACL은 <strong>&lsquo;누가 누구에게 닿나&rsquo;</strong>를 통제하는 한 겹입니다.</div>
+
   <div class="selfcheck">
     <h4>자가진단 체크리스트</h4>
     <label class="chk"><input type="checkbox"> MCP가 &quot;AI용 표준 단자&quot;라는 개념과 stdio/HTTP 두 연결 방식의 차이를 설명할 수 있다</label>
@@ -4588,6 +4655,7 @@ ssh 사용자이름@서버tailnet이름</code></pre>
     <label class="chk"><input type="checkbox"> 사내망 직접(LAN) 방식과 Tailscale 방식의 장단점을 알고, 필요하면 &quot;외근 노트북만 Tailscale&quot;하이브리드로 구성할 수 있다</label>
     <label class="chk"><input type="checkbox"> &quot;Tailscale은 길, MCP는 관리자가 연 창구&quot; — 길이 열려도 관리자가 만든 창구만큼만 쓸 수 있다는 원리를 설명할 수 있다</label>
     <label class="chk"><input type="checkbox"> 관리자로서 외근지에서 원격 PC 등록 → SSH 접속 → 관리 명령 → 키 등록까지, LLM 프롬프트로 지시하는 흐름을 안다</label>
+    <label class="chk"><input type="checkbox"> Tailscale 기본값은 &quot;모두 서로 연결(그물망)&quot;임을 알고, ACL로 &quot;팀원→서버만, 팀원끼리 차단&quot;하는 방법을 설명할 수 있다</label>
   </div>
 
   <p class="src">출처: <a href="https://modelcontextprotocol.io/specification/latest">MCP Specification (2025-11-25)</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP Authorization</a> · <a href="https://modelcontextprotocol.io/docs/develop/build-server">Build an MCP Server</a> · <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP 문서</a> (2026-07 확인)</p>
