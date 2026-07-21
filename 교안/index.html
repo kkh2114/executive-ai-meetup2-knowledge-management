@@ -4258,6 +4258,125 @@ $ claude
     </ul>
   </details>
 
+  <h3>6-5. 사내·외근 어디서든 접속 — Tailscale로 안전한 길목 만들기</h3>
+  <div class="why">지금까지 만든 서버는 <strong>관리자 PC 안에서만</strong> 돕니다. 팀원이 자기 노트북에서, 특히 외근 나가서 위키를 쓰려면 서버까지 닿는 &quot;네트워크 길목&quot;이 필요합니다. 그 길목을 아무에게나 열면 위험하고, 안 열면 사내에서만 쓸 수 있습니다. Tailscale은 <strong>초대한 기기끼리만 보이는 안전한 사설 통로</strong>를 만들어 이 문제를 해결합니다.</div>
+
+  <h4>1) 먼저 이해 — 왜 &quot;길목&quot;이 필요한가</h4>
+  <p>6-1에서 만든 서버는 <code>stdio</code> 방식이라 서버를 실행한 <strong>그 PC 안에서만</strong> 작동합니다. 팀원의 노트북은 그 PC가 아니므로 그대로는 닿을 수 없습니다. 회사 지식을 팀 전체가 쓰게 하려면 두 개의 문을 차례로 통과하게 만들어야 합니다.</p>
+  <table class="tbl">
+    <thead>
+      <tr><th>문</th><th>무엇을 통제하나</th><th>담당</th><th>비유</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>1번 문 — 네트워크 길목</strong></td><td>이 서버에 <strong>닿을 수 있는 기기</strong>인가 (초대된 회사 기기만)</td><td>Tailscale</td><td>회사 건물 <strong>출입증</strong></td></tr>
+      <tr><td><strong>2번 문 — 권한 토큰</strong></td><td>들어온 사람이 <strong>어떤 문서까지</strong> 볼 수 있나 (6-2의 등급)</td><td>MCP 서버의 토큰</td><td>건물 안 특정 방의 <strong>열쇠</strong></td></tr>
+    </tbody>
+  </table>
+  <p>이렇게 두 겹이라, 토큰 하나가 새어 나가도 <strong>Tailscale에 초대되지 않은 외부인은 서버의 존재조차 알 수 없습니다.</strong> 반대로 서버를 인터넷에 그냥 공개하면 1번 문이 사라져 오직 토큰 하나에만 보안을 의존하게 됩니다.</p>
+
+  <details class="toggle deep">
+    <summary>더 알아보기 — 왜 폴더 공유나 공개 서버가 아니라 Tailscale인가</summary>
+    <ul>
+      <li><strong>공개 서버(VPS + 공개주소)</strong>: 팀원은 주소만으로 편하게 접속하지만, 전 세계 봇이 그 주소를 스캔하며 문을 두드립니다. 방어가 토큰 하나에만 걸립니다. 편의를 얻는 대신 노출 위험을 계속 관리해야 합니다.</li>
+      <li><strong>드라이브 폴더 공유</strong>: 접근 단위가 &quot;폴더&quot;라 인사·재무만 골라 가리기 어렵고(6-2의 등급 제어 불가), 검색 기록도 남지 않습니다.</li>
+      <li><strong>Tailscale</strong>: 초대된 기기끼리만 서로 보이는 가상 사설망(tailnet)을 만듭니다. 서버 주소가 이 망 안에만 존재해 외부에서는 아예 보이지 않고, 통신은 자동으로 암호화됩니다. 팀원은 앱 한 번만 깔면 됩니다.</li>
+    </ul>
+  </details>
+
+  <h4>2) Tailscale이 무엇인가 — 1분 정리</h4>
+  <p>Tailscale은 흩어져 있는 기기들을 <strong>&quot;하나의 가상 사내망&quot;으로 묶어 주는 프로그램</strong>입니다. 팀원이 집·카페·외근지 어디에 있든, Tailscale을 켜면 마치 같은 사무실 랜선에 꽂힌 것처럼 서버에 직접 연결됩니다. 인터넷을 타고 가지만 <strong>암호화된 전용 통로</strong>라 외부에서는 보이지 않습니다. 초대(Invite)로 들어온 기기만 이 통로의 일원이 됩니다.</p>
+
+  <h4>3) 설치와 팀 초대 — 관리자(지식관리자)가 하는 일</h4>
+  <div class="callout">아래 3)은 <strong>서버를 운영하는 관리자 1명</strong>만 하면 됩니다. 팀원은 4)만 따라 하면 됩니다.</div>
+  <ol>
+    <li><strong>가입</strong> — <code>tailscale.com</code>에서 <strong>회사 대표 계정 1개</strong>(구글 워크스페이스·Microsoft·GitHub 계정 중 하나)로 로그인해 tailnet을 만듭니다.</li>
+    <li><strong>서버가 될 기기에 설치</strong> — 위키 MCP 서버가 도는 PC(관리자 PC 또는 24시간 켜진 사내 서버)에 Tailscale 앱을 설치하고 <strong>같은 대표 계정</strong>으로 로그인합니다. 이 기기가 tailnet에 합류합니다.</li>
+    <li><strong>서버 주소 확인</strong> — 팀원에게 알려줄 이 서버의 tailnet 주소(<code>100.x.y.z</code> 형태)를 확인합니다.</li>
+    <li><strong>팀원 초대</strong> — 관리 콘솔(<code>login.tailscale.com</code>)의 <strong>Users → Invite external users</strong>에서 팀원 이메일로 초대 링크를 보냅니다. 초대되지 않은 사람은 이 망에 들어올 수 없습니다.</li>
+  </ol>
+  <details class="toggle">
+    <summary>이 단계에서 쓰는 확인용 CLI (설치는 앱으로, 확인만 명령으로)</summary>
+    <div class="os-tabs">
+      <div class="os-btns"><button class="os-btn" data-os="mac">macOS</button><button class="os-btn" data-os="win">Windows</button></div>
+      <div class="os-pane" data-os="mac"><pre class="cmd"><code># 이 기기의 tailnet 주소(100.x.y.z) 확인 — 팀원에게 알려줄 주소
+tailscale ip -4
+
+# tailnet에 어떤 기기들이 묶여 있는지 확인
+tailscale status</code></pre></div>
+      <div class="os-pane" data-os="win"><pre class="cmd"><code># PowerShell에서 — 이 기기의 tailnet 주소 확인
+tailscale ip -4
+
+# tailnet에 묶인 기기 목록 확인
+tailscale status</code></pre></div>
+    </div>
+  </details>
+
+  <h4>4) 팀원 PC에서 — 접속 준비 (팀원이 하는 일)</h4>
+  <ol>
+    <li><strong>초대 수락</strong> — 관리자가 보낸 초대 메일의 링크를 열어 회사 계정으로 가입/수락합니다.</li>
+    <li><strong>앱 설치</strong> — 자기 노트북에 Tailscale 앱을 설치하고 <strong>같은 회사 계정</strong>으로 로그인합니다. 이제 내 노트북도 tailnet에 합류했습니다.</li>
+    <li><strong>켜 두기</strong> — Tailscale을 켜 두면 외근지에서도 사내처럼 서버에 닿습니다. (끄면 다시 안 보입니다 — 이것이 안전장치입니다.)</li>
+  </ol>
+  <div class="callout">여기까지가 <strong>1번 문(출입증)</strong>입니다. 이제 팀원의 노트북이 서버까지 &quot;닿을&quot; 수는 있게 됐습니다. 남은 것은 그 노트북의 LLM을 서버에 &quot;연결&quot;하고(2번 문=토큰), 서버가 원격 접속을 받도록 바꾸는 일입니다.</div>
+
+  <h4>5) 서버를 길목에 올리고 팀원 LLM에 연결하기</h4>
+  <p>원격 접속을 받으려면 6-1의 서버를 <code>stdio</code>(로컬 전용)에서 <strong>Streamable HTTP</strong>(원격 접속용)로 바꿔야 합니다. 코드는 LLM에게 맡깁니다.</p>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (관리자 PC에서) 서버를 원격 접속용으로 전환</div>
+    <blockquote class="llm-prompt">우리 위키 MCP 서버 server.py를 팀원들이 Tailscale 망 안에서 원격 접속할 수 있게 바꿔줘. 요구사항은 다음과 같아.
+
+1. transport를 stdio에서 Streamable HTTP로 바꿔줘. 포트는 8721로.
+2. 접속할 때 Authorization 헤더의 Bearer 토큰으로 6-2의 권한 등급(WIKI_TOKEN 표)을 검증해줘. 토큰이 없거나 틀리면 접속을 거부해줘.
+3. 이 PC의 Tailscale 주소로만 접속을 받게 하고(공개 인터넷에는 열지 마), 누가 접속해 무엇을 검색했는지 로그를 계속 남겨줘.
+4. 서버가 항상 켜져 있어야 팀원이 아무 때나 쓸 수 있으니, 컴퓨터를 켜면 자동으로 실행되게(백그라운드 상주) 설정하는 방법도 알려줘.
+5. 완성되면 실행해서, 다른 기기에서 접속되는지 시험하는 방법을 안내해줘.</blockquote>
+  </div>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (팀원 PC에서) 원격 위키 서버에 연결</div>
+    <blockquote class="llm-prompt">Claude Code에서 회사 위키 MCP 서버에 원격으로 연결해줘. 연결 방식은 http(Streamable HTTP)야. 주소는 http://관리자서버의_Tailscale주소:8721/mcp 이고, Authorization 헤더에 Bearer 내토큰 을 넣어줘. 연결한 뒤 claude mcp list 로 wiki 서버가 Connected 로 뜨는지 확인 결과를 보여줘.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
+      <pre class="cmd"><code># 팀원 PC에서 — 원격(http) 서버로 등록 (주소·토큰은 각자 것으로 교체)
+claude mcp add --transport http wiki \
+  http://100.x.y.z:8721/mcp \
+  --header "Authorization: Bearer 내토큰"
+
+# 연결 확인
+claude mcp list</code></pre>
+    </details>
+  </div>
+
+  <div class="checkpoint">이렇게 나오면 성공: 팀원이 <strong>외근지에서 노트북 하나만 들고</strong> Tailscale을 켠 뒤 <code>claude mcp list</code>에서 wiki 서버가 <strong>Connected</strong>로 뜨고, 자기 권한 등급 범위의 위키가 검색되면 &quot;사내·외근 어디서든 통제된 지식 접근&quot;이 완성된 것입니다.</div>
+
+  <details class="toggle out">
+    <summary>예상 출력 화면 (팀원 노트북, 외근 중)</summary>
+    <pre class="term"><code>$ tailscale status
+100.114.228.99  admin-server   회사계정  macOS   active
+100.120.10.44   my-laptop      회사계정  windows active; offers exit node
+
+$ claude mcp list
+Checking MCP server health...
+
+wiki: http://100.114.228.99:8721/mcp (HTTP) - ✓ Connected
+
+$ claude
+&gt; 위키에서 "표준 견적" 관련 문서 찾아줘
+● wiki - search_wiki (MCP)
+  [견적-표준절차.md] 표준 견적은 3단계로 작성한다 ...
+  [출처: 견적-표준절차.md]</code></pre>
+  </details>
+
+  <details class="toggle warn">
+    <summary>자주 하는 실수 &amp; 복구법</summary>
+    <ul>
+      <li><strong>Tailscale이 꺼져 있어 서버가 안 보인다</strong> → 팀원 PC에서 Tailscale 앱이 켜져 <strong>로그인 상태(연결됨)</strong>인지 먼저 확인하세요. <code>tailscale status</code>에 관리자 서버가 보여야 접속됩니다.</li>
+      <li><strong>주소는 맞는데 연결이 안 된다</strong> → (1) 관리자 서버 PC가 켜져 있고 MCP 서버가 실행 중인지, (2) 서버가 <code>127.0.0.1</code>(자기 자신)에만 묶여 있지 않고 Tailscale 주소로 접속을 받도록 설정됐는지 확인하세요. LLM에게 &quot;서버가 Tailscale 주소로 접속을 받게 돼 있는지 확인해줘&quot;라고 하면 됩니다.</li>
+      <li><strong>Connected는 됐는데 &quot;권한 없음&quot;만 나온다</strong> → Authorization 헤더의 Bearer 토큰이 빠졌거나 오타입니다. 6-2에서 발급받은 <strong>본인 등급 토큰</strong>이 맞는지 확인하세요.</li>
+      <li><strong>관리자 PC를 끄면 팀원 전체가 접속 불가</strong> → 정상입니다. 서버가 그 PC에 있기 때문입니다. 팀 규모가 커지면 <strong>24시간 켜진 사내 서버(또는 VPS)를 tailnet에 넣어</strong> 그쪽에서 서버를 돌리면 관리자 PC 상태와 무관하게 항상 접속됩니다.</li>
+      <li><strong>퇴사자·분실 노트북 차단</strong> → 관리 콘솔에서 해당 기기/사용자를 <strong>Remove</strong> 하면 즉시 망에서 끊깁니다. 토큰까지 폐기하면(6-2) 이중으로 차단됩니다.</li>
+    </ul>
+  </details>
+
   <div class="selfcheck">
     <h4>자가진단 체크리스트</h4>
     <label class="chk"><input type="checkbox"> MCP가 &quot;AI용 표준 단자&quot;라는 개념과 stdio/HTTP 두 연결 방식의 차이를 설명할 수 있다</label>
@@ -4266,6 +4385,8 @@ $ claude
     <label class="chk"><input type="checkbox"> 등급이 다른 두 PC에서 같은 질문을 던져 다른 범위의 답이 나오는 것을 확인했다</label>
     <label class="chk"><input type="checkbox"> 구조·관계·의미 질문을 자동 판별하는 통합 스킬을 저장했고, 답변에 [출처]가 붙는다</label>
     <label class="chk"><input type="checkbox"> claude mcp add(또는 claude_desktop_config.json)로 일반 LLM에서 위키 지식을 꺼내 썼다</label>
+    <label class="chk"><input type="checkbox"> Tailscale이 &quot;출입증(네트워크 길목)&quot;, 토큰이 &quot;방 열쇠&quot;라는 두 겹 보안 구조를 설명할 수 있다</label>
+    <label class="chk"><input type="checkbox"> Tailscale로 팀원 기기를 초대하고, 외근지에서 원격(http)으로 위키 MCP 서버에 접속해 봤다</label>
   </div>
 
   <p class="src">출처: <a href="https://modelcontextprotocol.io/specification/latest">MCP Specification (2025-11-25)</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP Authorization</a> · <a href="https://modelcontextprotocol.io/docs/develop/build-server">Build an MCP Server</a> · <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP 문서</a> (2026-07 확인)</p>
