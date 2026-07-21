@@ -190,6 +190,14 @@
   }
   .callout::before{content:"📌"; position:absolute; left:13px; top:11px; font-size:15px;}
   .callout b{color:#7A4E12;}
+  .dialog{margin:14px 0; padding:6px 0; border-left:3px solid var(--blueprint-tint); padding-left:16px;}
+  .dialog .dl{margin:10px 0; font-size:14px; line-height:1.7; color:var(--ink-soft);}
+  .dialog .who{display:inline-block; margin-right:8px; padding:1px 9px; border-radius:999px;
+    font-family:var(--mono); font-size:11px; font-weight:600; vertical-align:1px; white-space:nowrap;}
+  .dialog .who.ask{background:var(--paper-2); color:var(--ink-soft);}
+  .dialog .who.ans{background:var(--blueprint-tint); color:var(--blueprint);}
+  .dialog .who.got{background:var(--amber-tint); color:var(--amber);}
+  .dialog .dl strong{color:var(--ink);}
   .callout.danger{
     background:var(--danger-tint); border:1.5px solid var(--danger); color:#6E241C;
     font-size:14.5px; font-weight:600;
@@ -4421,6 +4429,43 @@ $ claude
     </ul>
   </details>
 
+  <h3>6-6. 에피소드로 이해하기 — &quot;타일스케일만 켜면 서버가 다 열리는 거 아니에요?&quot;</h3>
+  <div class="why">여기까지 배우면 누구나 똑같은 의문이 듭니다 — &quot;Tailscale로 원격 서버에 연결됐으니, 이제 그 서버를 마음대로 쓸 수 있는 거 아냐?&quot; 신입사원 민수의 질문을 따라가며 이 오해를 풀어 봅니다. 답은 6-1에서 우리가 <strong>왜 MCP를 그렇게 만들었는지</strong>와 정확히 이어집니다.</div>
+
+  <div class="dialog">
+    <p class="dl"><span class="who ask">민수</span> &ldquo;Tailscale을 켜니까 회사 서버에 연결됐어요. 그럼 그 서버 <strong>바탕화면</strong>도 보고 마우스로 조작할 수 있는 거죠?&rdquo;</p>
+    <p class="dl"><span class="who ans">관리자</span> &ldquo;아니요. Tailscale은 <strong>&lsquo;길&rsquo;만</strong> 놓은 거예요. 길이 뚫렸다고 상대 컴퓨터 화면이 저절로 보이진 않아요. 화면을 보고 조작하려면 <strong>RDP(원격 데스크톱)</strong>라는 다른 도구가 서버에 켜져 있어야 하고, 그건 <strong>관리자인 제가 서버에서 허락</strong>해야만 열려요.&rdquo;</p>
+    <p class="dl"><span class="who ask">민수</span> &ldquo;그럼 <strong>VS Code가 없으면</strong> 아예 접속을 못 해요?&rdquo;</p>
+    <p class="dl"><span class="who ans">관리자</span> &ldquo;접속의 본체는 VS Code가 아니라 <strong>SSH</strong>라는 기술이에요. VS Code는 그 SSH 접속을 보기 좋게 감싼 것뿐이라, 없어도 터미널로 접속은 돼요. 다만 그것도 결국 <strong>서버가 SSH 창구를 열어 뒀을 때</strong> 얘기죠. 무엇을 열지는 전부 서버(관리자)가 정해요.&rdquo;</p>
+    <p class="dl"><span class="who ask">민수</span> &ldquo;정리하면… 저는 결국 <strong>뭘</strong> 할 수 있는 거예요?&rdquo;</p>
+    <p class="dl"><span class="who ans">관리자</span> &ldquo;제가 열어 둔 <strong>창구만큼요.</strong> 지금은 &lsquo;위키 읽기&rsquo; 창구(MCP) 하나만 열어 뒀으니, 민수 씨는 그걸로 위키를 검색해 쓸 수 있어요. 바탕화면 조작(RDP)도, 다른 폴더 열기도 저는 열지 않았으니 안 돼요. 접근 권한이 없어서가 아니라, <strong>그 창구를 아직 안 만들었기 때문</strong>이에요.&rdquo;</p>
+    <p class="dl"><span class="who got">민수의 깨달음</span> &ldquo;아! Tailscale은 <strong>길</strong>일 뿐이고, 제가 쓸 수 있는 건 <strong>관리자가 연 창구만큼</strong>이구나.&rdquo;</p>
+  </div>
+
+  <table class="tbl">
+    <thead>
+      <tr><th>창구</th><th>관리자가 열었나</th><th>내가 쓸 수 있나</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>위키 읽기 (MCP 서버)</td><td>✅ 열어 둠</td><td>✅ 가능 — 위키 검색·읽기</td></tr>
+      <tr><td>바탕화면 조작 (RDP)</td><td>❌ 안 열음</td><td>❌ 불가</td></tr>
+      <tr><td>서버의 다른 폴더·파일</td><td>❌ 안 열음</td><td>❌ 불가</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout"><strong>한 줄 정리:</strong> Tailscale은 안전한 <strong>길</strong>을 놓을 뿐이고, 그 길 위에서 무엇을 할 수 있는지는 <strong>서버 관리자가 어떤 창구를 열어 뒀느냐</strong>로 정해집니다. 초대(출입증)로 길에 들어오고, 창구(MCP)로 딱 필요한 것만 씁니다.</div>
+
+  <p>그래서 <strong>6-1로 돌아가 보면</strong> 그림이 완성됩니다. 우리는 서버 폴더를 통째로 공유하지 않고 &lsquo;위키 읽기&rsquo;라는 <strong>창구 하나만</strong>, 그것도 <strong>읽기 전용</strong>으로 만들었습니다(6-1의 <code>allowedRoots</code>·읽기 전용 원칙). 팀원에게 서버 전체를 주는 대신 딱 필요한 창구만 내주면 실수도 사고도 원천적으로 줄어듭니다. <strong>&lsquo;길을 여는 것(Tailscale)&rsquo;과 &lsquo;창구를 만드는 것(MCP 개발)&rsquo;은 별개이고, 진짜 통제력은 창구를 어떻게 만드느냐에서 나옵니다.</strong></p>
+
+  <details class="toggle deep">
+    <summary>더 알아보기 — 우리 서버가 WSL(리눅스)일 때는 바탕화면이 아예 없습니다</summary>
+    <ul>
+      <li><strong>원격이 &lsquo;윈도우 자체&rsquo;라면</strong> → 관리자가 RDP를 켜 주면 바탕화면을 보고 조작할 수 있습니다.</li>
+      <li><strong>원격이 &lsquo;윈도우 안의 WSL(리눅스)&rsquo;이라면</strong> → WSL은 원래 화면(GUI)이 없는 리눅스입니다. <strong>명령줄이 본체</strong>라서 &lsquo;바탕화면 조작&rsquo; 자체가 해당되지 않고, SSH나 창구(MCP)로 다루는 게 정석입니다.</li>
+      <li>즉 &quot;화면을 조작한다&quot;는 <strong>원격이 무엇이냐(윈도우냐 WSL이냐)</strong>와 <strong>관리자가 그 창구를 열었느냐</strong>에 함께 달려 있습니다. Tailscale이 열렸다고 저절로 되는 게 아닙니다.</li>
+    </ul>
+  </details>
+
   <div class="selfcheck">
     <h4>자가진단 체크리스트</h4>
     <label class="chk"><input type="checkbox"> MCP가 &quot;AI용 표준 단자&quot;라는 개념과 stdio/HTTP 두 연결 방식의 차이를 설명할 수 있다</label>
@@ -4432,6 +4477,7 @@ $ claude
     <label class="chk"><input type="checkbox"> Tailscale이 &quot;출입증(네트워크 길목)&quot;, 토큰이 &quot;방 열쇠&quot;라는 두 겹 보안 구조를 설명할 수 있다</label>
     <label class="chk"><input type="checkbox"> Tailscale로 팀원 기기를 초대하고, 외근지에서 원격(http)으로 위키 MCP 서버에 접속해 봤다</label>
     <label class="chk"><input type="checkbox"> 사내망 직접(LAN) 방식과 Tailscale 방식의 장단점을 알고, 필요하면 &quot;외근 노트북만 Tailscale&quot;하이브리드로 구성할 수 있다</label>
+    <label class="chk"><input type="checkbox"> &quot;Tailscale은 길, MCP는 관리자가 연 창구&quot; — 길이 열려도 관리자가 만든 창구만큼만 쓸 수 있다는 원리를 설명할 수 있다</label>
   </div>
 
   <p class="src">출처: <a href="https://modelcontextprotocol.io/specification/latest">MCP Specification (2025-11-25)</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP Authorization</a> · <a href="https://modelcontextprotocol.io/docs/develop/build-server">Build an MCP Server</a> · <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP 문서</a> (2026-07 확인)</p>
