@@ -4283,10 +4283,54 @@ $ claude
     </ul>
   </details>
 
-  <h4>2) Tailscale이 무엇인가 — 1분 정리</h4>
+  <h4>2) 접속 방식 두 가지 — 사내망 직접 vs Tailscale</h4>
+  <p>다른 PC에서 쓰는 이상 <strong>HTTP는 그대로</strong>지만, 그 HTTP 요청이 <strong>어떤 길</strong>로 서버에 닿을지는 두 가지 중에 고를 수 있습니다.</p>
+  <table class="tbl">
+    <thead>
+      <tr><th>방식</th><th>접속 주소</th><th>언제 되나</th><th>필요한 것</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>가. 사내망 직접</strong> (LAN)</td><td>관리자 PC의 사내 IP <code>192.168.x.x</code></td><td>같은 사무실 와이파이·랜에 있을 때만</td><td>서버를 사내 IP로 개방 + 공유기/방화벽 허용</td></tr>
+      <tr><td><strong>나. Tailscale</strong></td><td>서버의 tailnet 주소 <code>100.x.y.z</code></td><td>사무실 안·밖 어디서든</td><td>각 기기에 Tailscale 앱 설치·초대</td></tr>
+    </tbody>
+  </table>
+  <table class="tbl">
+    <thead>
+      <tr><th></th><th>장점</th><th>단점</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>가. 사내망 직접</strong></td><td>앱 설치가 필요 없고 설정이 간단, 사무실 안에서는 가장 빠름</td><td>사무실 밖(외근·재택)에서는 <strong>안 됨</strong> · 같은 와이파이의 방문객·외주 기기도 접근을 시도할 수 있음 · 공유기 재시작 등으로 사내 IP가 바뀌면 주소도 바뀜(고정 IP 권장)</td></tr>
+      <tr><td><strong>나. Tailscale</strong></td><td>안·밖 어디서나 <strong>같은 주소 하나</strong> · 초대된 회사 기기만 접근 · 통신 자동 암호화</td><td>각 기기에 앱 설치·로그인이 한 번 필요</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout"><strong>하이브리드 — 외근 노트북만 Tailscale.</strong> 전원이 앱을 깔 필요는 없습니다. <strong>사무실 상주 기기는 사내 IP로</strong> 접속하고, 자주 밖으로 나가는 사람의 <strong>노트북에만 Tailscale을 설치</strong>해 외근 시 접속하게 할 수 있습니다. 서버는 두 경로를 동시에 받을 수 있어, 사무실에서는 <code>192.168.x.x</code>로, 외근지에서는 <code>100.x.y.z</code>로 같은 서버에 닿습니다. 다만 주소가 두 벌이 되므로 &quot;누가 어느 주소를 쓰는지&quot;를 관리자가 안내해야 합니다.</div>
+
+  <details class="toggle deep">
+    <summary>더 알아보기 — 사내망 직접 접속으로 서버 열기 &amp; 하이브리드 실제 설정</summary>
+    <ul>
+      <li><strong>서버 바인딩</strong>: 서버가 <code>127.0.0.1</code>(자기 자신)에만 열려 있으면 다른 PC가 못 닿습니다. <code>0.0.0.0</code> 또는 관리자 PC의 사내 IP로 바인딩해야 같은 망의 다른 PC가 접속할 수 있습니다.</li>
+      <li><strong>고정 IP</strong>: DHCP로 사내 IP가 자동 배정되면 공유기 재시작 때 주소가 바뀌어 팀원 설정이 깨질 수 있습니다. 공유기에서 관리자 PC에 <strong>고정 IP</strong>를 할당하세요.</li>
+      <li><strong>방화벽·포트</strong>: 관리자 PC의 방화벽과 공유기에서 서버 포트(예: 8721)를 허용해야 합니다.</li>
+      <li><strong>하이브리드 구성</strong>: 서버는 그대로 사내 IP로 열어 두고, <strong>외근 노트북에만</strong> Tailscale을 설치합니다. 그러면 사무실 기기는 <code>192.168.x.x:8721</code>로, 외근 노트북은 <code>100.x.y.z:8721</code>로 같은 서버에 접속합니다.</li>
+    </ul>
+    <div class="os-tabs">
+      <div class="os-btns"><button class="os-btn" data-os="mac">macOS</button><button class="os-btn" data-os="win">Windows</button></div>
+      <div class="os-pane" data-os="mac"><pre class="cmd"><code># 관리자 PC의 사내 IP(192.168.x.x) 확인 — 팀원에게 알려줄 사내 주소
+ipconfig getifaddr en0     # 유선은 en1 일 수 있음</code></pre></div>
+      <div class="os-pane" data-os="win"><pre class="cmd"><code># PowerShell/명령프롬프트에서 사내 IP 확인 (IPv4 주소 항목)
+ipconfig</code></pre></div>
+    </div>
+    <div class="llm-block">
+      <div class="llm-label">LLM에게 이렇게 말하세요 — 사내망의 다른 PC에서 접속되게</div>
+      <blockquote class="llm-prompt">우리 위키 MCP 서버를 같은 사무실 네트워크(LAN)의 다른 PC에서도 접속할 수 있게 해줘. 127.0.0.1이 아니라 0.0.0.0:8721로 바인딩하고, 여전히 Authorization Bearer 토큰으로 권한을 검증해줘. 그리고 관리자 PC 방화벽과 공유기에서 열어야 할 포트가 무엇인지, 사내 IP를 고정하는 방법도 함께 알려줘.</blockquote>
+    </div>
+  </details>
+
+  <h4>3) Tailscale이 무엇인가 — 1분 정리</h4>
   <p>Tailscale은 흩어져 있는 기기들을 <strong>&quot;하나의 가상 사내망&quot;으로 묶어 주는 프로그램</strong>입니다. 팀원이 집·카페·외근지 어디에 있든, Tailscale을 켜면 마치 같은 사무실 랜선에 꽂힌 것처럼 서버에 직접 연결됩니다. 인터넷을 타고 가지만 <strong>암호화된 전용 통로</strong>라 외부에서는 보이지 않습니다. 초대(Invite)로 들어온 기기만 이 통로의 일원이 됩니다.</p>
 
-  <h4>3) 설치와 팀 초대 — 관리자(지식관리자)가 하는 일</h4>
+  <h4>4) Tailscale 설치와 팀 초대 — 관리자(지식관리자)가 하는 일</h4>
   <div class="callout">아래 3)은 <strong>서버를 운영하는 관리자 1명</strong>만 하면 됩니다. 팀원은 4)만 따라 하면 됩니다.</div>
   <ol>
     <li><strong>가입</strong> — <code>tailscale.com</code>에서 <strong>회사 대표 계정 1개</strong>(구글 워크스페이스·Microsoft·GitHub 계정 중 하나)로 로그인해 tailnet을 만듭니다.</li>
@@ -4311,7 +4355,7 @@ tailscale status</code></pre></div>
     </div>
   </details>
 
-  <h4>4) 팀원 PC에서 — 접속 준비 (팀원이 하는 일)</h4>
+  <h4>5) 팀원 PC에서 — 접속 준비 (팀원이 하는 일)</h4>
   <ol>
     <li><strong>초대 수락</strong> — 관리자가 보낸 초대 메일의 링크를 열어 회사 계정으로 가입/수락합니다.</li>
     <li><strong>앱 설치</strong> — 자기 노트북에 Tailscale 앱을 설치하고 <strong>같은 회사 계정</strong>으로 로그인합니다. 이제 내 노트북도 tailnet에 합류했습니다.</li>
@@ -4319,7 +4363,7 @@ tailscale status</code></pre></div>
   </ol>
   <div class="callout">여기까지가 <strong>1번 문(출입증)</strong>입니다. 이제 팀원의 노트북이 서버까지 &quot;닿을&quot; 수는 있게 됐습니다. 남은 것은 그 노트북의 LLM을 서버에 &quot;연결&quot;하고(2번 문=토큰), 서버가 원격 접속을 받도록 바꾸는 일입니다.</div>
 
-  <h4>5) 서버를 길목에 올리고 팀원 LLM에 연결하기</h4>
+  <h4>6) 서버를 길목에 올리고 팀원 LLM에 연결하기</h4>
   <p>원격 접속을 받으려면 6-1의 서버를 <code>stdio</code>(로컬 전용)에서 <strong>Streamable HTTP</strong>(원격 접속용)로 바꿔야 합니다. 코드는 LLM에게 맡깁니다.</p>
   <div class="llm-block">
     <div class="llm-label">LLM에게 이렇게 말하세요 — (관리자 PC에서) 서버를 원격 접속용으로 전환</div>
@@ -4333,7 +4377,7 @@ tailscale status</code></pre></div>
   </div>
   <div class="llm-block">
     <div class="llm-label">LLM에게 이렇게 말하세요 — (팀원 PC에서) 원격 위키 서버에 연결</div>
-    <blockquote class="llm-prompt">Claude Code에서 회사 위키 MCP 서버에 원격으로 연결해줘. 연결 방식은 http(Streamable HTTP)야. 주소는 http://관리자서버의_Tailscale주소:8721/mcp 이고, Authorization 헤더에 Bearer 내토큰 을 넣어줘. 연결한 뒤 claude mcp list 로 wiki 서버가 Connected 로 뜨는지 확인 결과를 보여줘.</blockquote>
+    <blockquote class="llm-prompt">Claude Code에서 회사 위키 MCP 서버에 원격으로 연결해줘. 연결 방식은 http(Streamable HTTP)야. 주소는 http://관리자가_알려준_서버주소:8721/mcp 이고(사무실이면 사내 IP 192.168.x.x, 외근이면 Tailscale 주소 100.x.y.z), Authorization 헤더에 Bearer 내토큰 을 넣어줘. 연결한 뒤 claude mcp list 로 wiki 서버가 Connected 로 뜨는지 확인 결과를 보여줘.</blockquote>
     <details class="toggle">
       <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
       <pre class="cmd"><code># 팀원 PC에서 — 원격(http) 서버로 등록 (주소·토큰은 각자 것으로 교체)
@@ -4387,6 +4431,7 @@ $ claude
     <label class="chk"><input type="checkbox"> claude mcp add(또는 claude_desktop_config.json)로 일반 LLM에서 위키 지식을 꺼내 썼다</label>
     <label class="chk"><input type="checkbox"> Tailscale이 &quot;출입증(네트워크 길목)&quot;, 토큰이 &quot;방 열쇠&quot;라는 두 겹 보안 구조를 설명할 수 있다</label>
     <label class="chk"><input type="checkbox"> Tailscale로 팀원 기기를 초대하고, 외근지에서 원격(http)으로 위키 MCP 서버에 접속해 봤다</label>
+    <label class="chk"><input type="checkbox"> 사내망 직접(LAN) 방식과 Tailscale 방식의 장단점을 알고, 필요하면 &quot;외근 노트북만 Tailscale&quot;하이브리드로 구성할 수 있다</label>
   </div>
 
   <p class="src">출처: <a href="https://modelcontextprotocol.io/specification/latest">MCP Specification (2025-11-25)</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP Authorization</a> · <a href="https://modelcontextprotocol.io/docs/develop/build-server">Build an MCP Server</a> · <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP 문서</a> (2026-07 확인)</p>
