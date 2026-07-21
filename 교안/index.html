@@ -4466,6 +4466,115 @@ $ claude
     </ul>
   </details>
 
+  <h3>6-7. 에피소드 — 관리자의 원격 관리: 사무실 밖에서 서버를 되살리다</h3>
+  <div class="why">6-5·6-6은 <strong>팀원</strong>이 위키를 꺼내 쓰는 쪽이었습니다. 이번엔 반대편 — 서버를 운영하는 <strong>관리자</strong>가 외근·재택 중에 Tailscale로 서버를 직접 손보는 하루입니다. 여기서도 원칙은 같습니다: <strong>명령어를 외우지 말고 Claude Code 같은 LLM에게 시키고</strong>, 실제 명령이 궁금하면 토글을 엽니다.</div>
+
+  <div class="dialog">
+    <p class="dl"><span class="who ask">팀원 메시지</span> &ldquo;관리자님, 위키가 갑자기 안 떠요! 검색하면 &lsquo;연결 안 됨&rsquo;이라고만 나와요.&rdquo;</p>
+    <p class="dl"><span class="who ans">관리자(지훈)</span> &ldquo;지금 카페인데… 서버 앞에 없네. 그래도 <strong>Tailscale</strong>이 있으니 여기서 바로 들어가서 고치면 돼. 노트북만 있으면 서버가 사무실에 있든 어디 있든 상관없거든.&rdquo;</p>
+  </div>
+  <p>지훈이 하는 일은 네 가지입니다 — <strong>①원격 PC를 우리 망에 등록 → ②그 서버에 원격 접속 → ③멈춘 서버를 되살리는 관리 명령 → ④다음부턴 비번 없이(키 등록).</strong> 각 단계마다 <strong>Claude Code에 시키는 프롬프트가 먼저</strong> 나오고, 실제 명령어는 그 아래 토글에 숨겨 뒀습니다.</p>
+
+  <h4>1) 원격 PC를 우리 Tailscale 망에 등록 (처음 한 번)</h4>
+  <div class="callout">원격으로 관리하려면, 먼저 그 서버(또는 관리 대상 PC)가 <strong>우리 tailnet의 일원</strong>이어야 합니다. 이 작업은 <strong>그 서버에서</strong> 한 번만 합니다.</div>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (등록할 서버에서) Claude Code에</div>
+    <blockquote class="llm-prompt">이 PC를 회사 Tailscale 망에 등록해줘. Tailscale을 설치하고 로그인 절차를 안내한 다음, 등록이 끝나면 이 PC의 tailnet 주소(100.x.y.z)와 기기 이름을 알려줘. 회사 계정으로 로그인해야 한다는 점도 알려줘.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
+      <div class="os-tabs">
+        <div class="os-btns"><button class="os-btn" data-os="mac">macOS / Linux(WSL)</button><button class="os-btn" data-os="win">Windows</button></div>
+        <div class="os-pane" data-os="mac"><pre class="cmd"><code># Tailscale 설치
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# 망에 등록 (로그인 링크가 뜸 → 회사 계정으로 승인)
+sudo tailscale up
+
+# 이 PC의 tailnet 주소 확인 → 관리자가 접속할 주소
+tailscale ip -4</code></pre></div>
+        <div class="os-pane" data-os="win"><pre class="cmd"><code># PowerShell에서 설치 (또는 tailscale.com에서 설치파일)
+winget install tailscale.tailscale
+
+# 앱이 뜨면 회사 계정으로 로그인 → 망에 등록
+tailscale up
+
+# 이 PC의 tailnet 주소 확인
+tailscale ip -4</code></pre></div>
+      </div>
+    </details>
+  </div>
+  <div class="checkpoint">등록 성공: 관리 콘솔(<code>login.tailscale.com</code>)의 기기 목록에 이 서버가 뜨고, <code>100.x.y.z</code> 주소를 받으면 이제 어디서든 이 서버에 닿을 수 있습니다.</div>
+
+  <h4>2) 외근지에서 그 서버에 원격 접속</h4>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (내 노트북에서) Claude Code에</div>
+    <blockquote class="llm-prompt">회사 위키 서버에 SSH로 원격 접속해줘. 접속 대상은 사용자이름@서버의_tailnet이름(또는 100.x.y.z) 이야. 접속되면 지금 어느 서버에 들어와 있는지(hostname)와 내 계정 이름을 확인해서 보여줘. 접속이 안 되면 Tailscale이 켜져 있는지, 서버의 SSH가 실행 중인지부터 점검해줘.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
+      <pre class="cmd"><code># 원격 서버에 접속 (이름·주소는 내 것으로 교체)
+ssh 사용자이름@서버tailnet이름
+
+# 들어온 뒤 — 어느 서버인지, 누구로 들어왔는지 확인
+hostname && whoami
+
+# (접속 안 될 때) 내 쪽에서 서버가 보이는지
+tailscale status | grep 서버tailnet이름</code></pre>
+    </details>
+  </div>
+
+  <h4>3) 멈춘 위키 서버를 되살리는 관리 명령</h4>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (원격 접속된 상태에서) Claude Code에</div>
+    <blockquote class="llm-prompt">위키 MCP 서버가 응답을 안 해. 서버에서 (1) 위키 서버 프로세스가 살아 있는지 확인하고, (2) 죽어 있으면 다시 실행해줘. (3) 그리고 접속 로그(wiki_access.log) 마지막 20줄을 보여줘서 무슨 일이 있었는지 알려줘. 위키 파일 자체는 절대 수정하지 말고, 서버를 다시 띄우는 것까지만 해줘.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
+      <pre class="cmd"><code># (1) 위키 서버 프로세스가 살아 있나
+ps aux | grep server.py
+
+# (2) 서비스로 등록돼 있으면 상태 확인 후 재시작
+sudo systemctl status wiki-mcp
+sudo systemctl restart wiki-mcp
+
+# (2-대안) 서비스가 아니면 직접 다시 실행 (백그라운드)
+nohup python ~/company-wiki-server/server.py &amp;
+
+# (3) 접속 로그 마지막 20줄
+tail -n 20 ~/company-wiki-server/wiki_access.log</code></pre>
+    </details>
+  </div>
+  <div class="checkpoint">이렇게 나오면 성공: 서버가 다시 &quot;Connected&quot; 상태가 되고, 아까 &quot;안 떠요&quot;라던 팀원이 위키 검색이 다시 된다고 알려오면 원격 복구 완료입니다. 관리자는 <strong>서버 앞에 가지 않고</strong> 카페에서 고친 셈입니다.</div>
+
+  <h4>4) 다음부턴 비밀번호 없이 — SSH 키 등록</h4>
+  <div class="callout">매번 비밀번호를 치는 게 번거롭고 덜 안전합니다. <strong>내 노트북에 열쇠(키)를 만들어 서버에 등록</strong>해 두면, 이후엔 비번 없이 그 노트북에서만 접속됩니다.</div>
+  <div class="llm-block">
+    <div class="llm-label">LLM에게 이렇게 말하세요 — (내 노트북에서) Claude Code에</div>
+    <blockquote class="llm-prompt">이 노트북에서 회사 서버로 비밀번호 없이 접속할 수 있게 SSH 키를 설정해줘. (1) 키가 없으면 새로 만들고(ed25519), (2) 공개키를 서버(사용자이름@서버tailnet이름)의 authorized_keys에 등록해줘. 등록할 때 서버 비밀번호는 내가 한 번 입력할게. (3) 끝나면 실제로 비밀번호 없이 접속되는지 확인해줘. 비밀키는 절대 밖으로 보내지 말고 이 노트북에만 둬.</blockquote>
+    <details class="toggle">
+      <summary>이 프롬프트가 내부적으로 실행하는 CLI</summary>
+      <pre class="cmd"><code># (1) 키 생성 — 엔터로 진행 (id_ed25519 / id_ed25519.pub 생성)
+ssh-keygen -t ed25519 -C "admin-laptop"
+
+# (2) 공개키를 서버에 등록 (이때 서버 비밀번호 1회 입력)
+ssh-copy-id 사용자이름@서버tailnet이름
+
+# (3) 확인 — 비밀번호를 안 물으면 성공
+ssh 사용자이름@서버tailnet이름</code></pre>
+    </details>
+  </div>
+  <div class="checkpoint">확인: <code>ssh 서버</code>가 <strong>비밀번호를 안 물어보고 바로 로그인</strong>되면 키 등록 성공. 이후 VS Code Remote-SSH도 비번 없이 붙습니다.</div>
+
+  <details class="toggle warn">
+    <summary>자주 하는 실수 &amp; 복구법 (관리자용)</summary>
+    <ul>
+      <li><strong>서버가 tailnet에 안 보인다</strong> → 등록한 서버에서 <code>sudo tailscale up</code>이 로그인까지 끝났는지, 관리 콘솔 기기 목록에 떴는지 확인하세요.</li>
+      <li><strong>SSH 접속이 &quot;Connection refused&quot;</strong> → 서버의 SSH 서버(sshd)가 꺼진 것입니다. 서버에서 <code>sudo service ssh start</code>(WSL) 또는 <code>sudo systemctl start ssh</code>로 켜세요.</li>
+      <li><strong>키 등록했는데 여전히 비번을 묻는다</strong> → 서버의 <code>~/.ssh</code> 권한 문제일 수 있습니다. Claude Code에게 &quot;authorized_keys 권한을 600, .ssh 폴더를 700으로 맞춰줘&quot;라고 시키면 됩니다.</li>
+      <li><strong>관리자 계정은 강력합니다</strong> → SSH 관리자 계정은 위키 토큰과 비교할 수 없이 강한 창구입니다(서버 전체 접근). 이 계정은 <strong>관리자 본인만</strong> 쓰고, 키 인증으로 바꾼 뒤엔 <code>PasswordAuthentication no</code>로 비밀번호 접속을 아예 막는 것이 안전합니다.</li>
+    </ul>
+  </details>
+
+  <div class="callout"><strong>6-6과 나란히 보기:</strong> 같은 서버, 같은 Tailscale 길이지만 — <strong>팀원은 위키 MCP라는 좁은 창구</strong>로 위키만 읽고, <strong>관리자는 SSH라는 강한 창구</strong>로 서버 전체를 원격으로 손봅니다. &quot;누가 어떤 창구를 받았느냐&quot;로 할 수 있는 일이 완전히 갈린다는 6-6의 원리가, 관리자 쪽에서 이렇게 나타납니다.</div>
+
   <div class="selfcheck">
     <h4>자가진단 체크리스트</h4>
     <label class="chk"><input type="checkbox"> MCP가 &quot;AI용 표준 단자&quot;라는 개념과 stdio/HTTP 두 연결 방식의 차이를 설명할 수 있다</label>
@@ -4478,6 +4587,7 @@ $ claude
     <label class="chk"><input type="checkbox"> Tailscale로 팀원 기기를 초대하고, 외근지에서 원격(http)으로 위키 MCP 서버에 접속해 봤다</label>
     <label class="chk"><input type="checkbox"> 사내망 직접(LAN) 방식과 Tailscale 방식의 장단점을 알고, 필요하면 &quot;외근 노트북만 Tailscale&quot;하이브리드로 구성할 수 있다</label>
     <label class="chk"><input type="checkbox"> &quot;Tailscale은 길, MCP는 관리자가 연 창구&quot; — 길이 열려도 관리자가 만든 창구만큼만 쓸 수 있다는 원리를 설명할 수 있다</label>
+    <label class="chk"><input type="checkbox"> 관리자로서 외근지에서 원격 PC 등록 → SSH 접속 → 관리 명령 → 키 등록까지, LLM 프롬프트로 지시하는 흐름을 안다</label>
   </div>
 
   <p class="src">출처: <a href="https://modelcontextprotocol.io/specification/latest">MCP Specification (2025-11-25)</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP Authorization</a> · <a href="https://modelcontextprotocol.io/docs/develop/build-server">Build an MCP Server</a> · <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP 문서</a> (2026-07 확인)</p>
